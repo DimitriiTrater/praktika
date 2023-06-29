@@ -9,7 +9,7 @@ find_package(glfw3 3.3 REQUIRED)
 
 add_library(GLAD "include/glad/glad.c")
 
-add_executable(3D_ENGINE main.cpp)
+add_executable(3D_ENGINE main.cpp )
 
 set(LIBS glfw ${GLFW3_LIBRARY} ${OPENGL_LIBRARY} GLAD)
 
