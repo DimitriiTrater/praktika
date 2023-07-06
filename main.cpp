@@ -5,6 +5,7 @@
 #include "camera.hpp"
 #include "img.hpp"
 
+#include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/geometric.hpp>
 #include <glm/glm.hpp>
@@ -81,6 +82,9 @@ float lastY =  SCR_HEIGHT / 2.0;
 
 void mouseInput(GLFWwindow* window, double xposIn, double yposIn);
 void zoomInput(GLFWwindow* window, double xoffset, double yoffset);
+void changeCameraMode(GLFWwindow* window);
+void changeCameraView(GLFWwindow* window);
+glm::mat4 getChangedPerspectiveMat4();
 
 
 int main(){
@@ -189,7 +193,9 @@ int main(){
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        keyboardInput(window);
+        keyboardInput   (window);
+        changeCameraMode(window);
+        changeCameraView(window);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -207,8 +213,10 @@ int main(){
 
         view = camera.GetViewMatrix();
 
-        projection = glm::perspective(glm::radians(camera.Zoom), static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 100.0f);
-
+        projection = getChangedPerspectiveMat4();
+        
+        // projection = glm::perspective(glm::radians(camera.Zoom), static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 100.0f);
+        // projection = glm::ortho();
         unsigned int modelLoc = glGetUniformLocation(shader.ID, "model");
         unsigned int viewLoc  = glGetUniformLocation(shader.ID, "view");
         unsigned int projectionLoc = glGetUniformLocation(shader.ID, "projection");
@@ -230,34 +238,82 @@ int main(){
 }
 
 
-void keyboardInput(GLFWwindow *window)
+void freeCam(GLFWwindow *window)
+{
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        camera.ProcessKeyboardFree(FORWARD, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        camera.ProcessKeyboardFree(BACKWARD, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        camera.ProcessKeyboardFree(LEFT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        camera.ProcessKeyboardFree(RIGHT, deltaTime);
+
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+        camera.ProcessKeyboardFree(UP, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+        camera.ProcessKeyboardFree(DOWN, deltaTime);
+}
+
+void orbitCam(GLFWwindow *window)
+{
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        camera.ProcessKeyboardOrbit(LEFT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        camera.ProcessKeyboardOrbit(RIGHT, deltaTime);
+
+}
+
+void changeCameraMode(GLFWwindow *window)
+{
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+        camera.SetCameraState(FREE);
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+        camera.SetCameraState(ORBIT);
+}
+
+glm::mat4 getChangedPerspectiveMat4()
+{
+    auto projection = glm::mat4(1.0f);
+    if (camera.viewState == ORTHO)
+        return projection = glm::ortho(-1.0, 1.0, -1.0, 1.0, 1.0, 30.0);
+    
+    return projection = glm::perspective(glm::radians(camera.Zoom), static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 100.0f);
+}
+
+void changeCameraView(GLFWwindow* window)
+{
+    if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS)
+        camera.viewState = ORTHO;
+    if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
+        camera.viewState = PERSPECTIVE;
+}
+
+void keyboardInput(GLFWwindow* window)
 {
     // exit
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
     // move
-    float cameraSpeed = static_cast<float>(2.5 * deltaTime);
+    switch (camera.GetCameraState()) 
+    {
+    case FREE:
+    freeCam(window);
+    break;
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, deltaTime);
-
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-        camera.ProcessKeyboard(UP, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-        camera.ProcessKeyboard(DOWN, deltaTime);
-
+    case ORBIT:
+    orbitCam(window);
+    break;
+    }
 }
 
 
 void mouseInput(GLFWwindow* window, double xposIn, double yposIn)
 {
+    if(camera.GetCameraState() == ORBIT)
+        return;
+
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
 

@@ -2,9 +2,13 @@
 #define CAMERA_HPP
 
 #include "include/glad/glad.h"
+#include <GLFW/glfw3.h>
+#include <cmath>
+#include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <math.h>
 #include <vector>
 
 enum CameraMovement 
@@ -17,11 +21,16 @@ enum CameraMovement
     DOWN
 };
 
-enum CameraMod
+enum CameraMode
 {
     FREE,
     ORBIT,
-    MAP,
+};
+
+enum ViewMode
+{
+    PERSPECTIVE,
+    ORTHO
 };
 
 const float YAW         = -90.0f;
@@ -29,11 +38,14 @@ const float PITCH       =  0.0f;
 const float SPEED       =  2.5f;
 const float SENSITIVITY =  0.1f;
 const float ZOOM        =  45.0f;
+const float RAD         =  10.0f;
 
 
 class Camera
 {
 public:
+    int viewState;
+
     glm::vec3 Position;
     glm::vec3 Front;
     glm::vec3 Up;
@@ -42,14 +54,13 @@ public:
 
     float Yaw;
     float Pitch;
-
     float MovementSpeed;
     float MouseSensitivity;
     float Zoom;
 
     Camera(
         glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), 
-        glm::vec3 p = glm::vec3(0.0f, 1.0f, 0.0f), 
+        glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), 
         float yaw = YAW, float pitch = PITCH);
     
     Camera(
@@ -59,13 +70,17 @@ public:
     
     glm::mat4 GetViewMatrix() const;
 
-    void ProcessKeyboard(CameraMovement direction, float deltaTime);
-
+    void ProcessKeyboardFree(CameraMovement direction, float deltaTime);
+    void ProcessKeyboardOrbit(CameraMovement direction, float deltaTime);
     void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true);
-
     void ProcessMouseScroll(float yoffset);
 
+    void SetCameraState(CameraMode state);
+    int  GetCameraState() const;
+
 private:
+    double rotate;
+    int cameraState;
     void updateCameraVectors();
 
 };
@@ -92,10 +107,19 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
 
 glm::mat4 Camera::GetViewMatrix() const
 {
+
+    if (cameraState == ORBIT)
+    {
+        float camX = sin(rotate) * RAD;
+        float camZ = cos(rotate) * RAD;
+
+        return glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+    }   
+
     return glm::lookAt(Position, Position + Front, Up);
 }
 
-void Camera::ProcessKeyboard(CameraMovement direction, float deltaTime)
+void Camera::ProcessKeyboardFree(CameraMovement direction, float deltaTime)
 {
     float velocity = MovementSpeed * deltaTime;
     if (direction == FORWARD)
@@ -110,6 +134,14 @@ void Camera::ProcessKeyboard(CameraMovement direction, float deltaTime)
         Position += Up * velocity;
     if (direction == DOWN)
         Position -= Up * velocity;
+}
+
+void Camera::ProcessKeyboardOrbit(CameraMovement direction, float deltaTime)
+{
+    if (direction == LEFT)
+        rotate -= 0.1;
+    if (direction == RIGHT)
+        rotate += 0.1;
 }
 
 void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch)
@@ -138,6 +170,16 @@ void Camera::ProcessMouseScroll(float yoffset)
         Zoom = 1.0f;
     if (Zoom > 45.0f)
         Zoom = 45.0f;
+}
+
+void Camera::SetCameraState(CameraMode state)
+{
+    cameraState = state;
+}
+
+int Camera::GetCameraState() const
+{
+    return cameraState;
 }
 
 void Camera::updateCameraVectors()
