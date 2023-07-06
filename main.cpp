@@ -119,7 +119,7 @@ int main(){
     
     glEnable(GL_DEPTH_TEST);
 
-    Shader shader("/home/dmtr/praktika/vert.vs", "/home/dmtr/praktika/frag.fs");
+    Shader shader("praktika/vert.vs", "praktika/frag.fs");
 
     float vertices[] = {
         -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
@@ -215,8 +215,6 @@ int main(){
 
         projection = getChangedPerspectiveMat4();
         
-        // projection = glm::perspective(glm::radians(camera.Zoom), static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 100.0f);
-        // projection = glm::ortho();
         unsigned int modelLoc = glGetUniformLocation(shader.ID, "model");
         unsigned int viewLoc  = glGetUniformLocation(shader.ID, "view");
         unsigned int projectionLoc = glGetUniformLocation(shader.ID, "projection");
